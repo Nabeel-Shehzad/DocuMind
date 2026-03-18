@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     top_k_results: int = 5
 
     # Claude
-    claude_model: str = "claude-opus-4-5"
+    claude_model: str = "claude-sonnet-4-5"
     max_tokens: int = 2048
 
     class Config:
