@@ -8,7 +8,8 @@ class Settings(BaseSettings):
 
     # Supabase
     supabase_url: str = ""
-    supabase_key: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_key: str = ""   # service_role key — backend admin access
 
     # App
     app_env: str = "development"
@@ -31,6 +32,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Ensure directories exist
+# Ensure storage directories exist
 Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 Path(settings.chroma_dir).mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/api_config.dart';
 
 class ApiService extends GetxService {
@@ -13,11 +14,24 @@ class ApiService extends GetxService {
         baseUrl:        ApiConfig.baseUrl,
         connectTimeout: const Duration(milliseconds: ApiConfig.connectTimeoutMs),
         receiveTimeout: const Duration(milliseconds: ApiConfig.receiveTimeoutMs),
-        headers: {'Content-Type': 'application/json'},
+        headers:        {'Content-Type': 'application/json'},
       ),
     );
 
-    // Request/response logging in debug mode
+    // ── Auth interceptor — inject Bearer token on every request ──────────────
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final token = Supabase.instance.client.auth.currentSession?.accessToken;
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+    );
+
+    // ── Debug logging ─────────────────────────────────────────────────────────
     _dio.interceptors.add(LogInterceptor(
       requestBody:  true,
       responseBody: true,
@@ -25,7 +39,7 @@ class ApiService extends GetxService {
     ));
   }
 
-  // ── Documents ────────────────────────────────────────────────────────────
+  // ── Documents ───────────────────────────────────────────────────────────────
 
   Future<Response> uploadDocument(String filePath, String fileName) async {
     final formData = FormData.fromMap({
@@ -35,7 +49,7 @@ class ApiService extends GetxService {
       ApiConfig.uploadDocument,
       data: formData,
       options: Options(
-        contentType: 'multipart/form-data',
+        contentType:    'multipart/form-data',
         receiveTimeout: const Duration(seconds: 120),
       ),
     );
@@ -46,7 +60,7 @@ class ApiService extends GetxService {
   Future<Response> deleteDocument(String id) =>
       _dio.delete(ApiConfig.deleteDocument(id));
 
-  // ── Summary ──────────────────────────────────────────────────────────────
+  // ── Summary ─────────────────────────────────────────────────────────────────
 
   Future<Response> getSummary(String documentId, String summaryType) =>
       _dio.post(
@@ -55,6 +69,6 @@ class ApiService extends GetxService {
         options: Options(receiveTimeout: const Duration(seconds: 120)),
       );
 
-  // ── Raw Dio (used by SSE service) ────────────────────────────────────────
+  // ── Raw Dio (used by SSE service) ────────────────────────────────────────────
   Dio get dio => _dio;
 }

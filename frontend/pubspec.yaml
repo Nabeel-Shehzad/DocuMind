@@ -16,6 +16,9 @@ dependencies:
   # HTTP client
   dio: ^5.7.0
 
+  # Supabase (auth + realtime)
+  supabase_flutter: ^2.8.4
+
   # File picker (PDF + images)
   file_picker: ^8.1.2
 

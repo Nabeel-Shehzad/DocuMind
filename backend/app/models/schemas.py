@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 
-# ── Upload ──────────────────────────────────────────────────────────────────
+# ── Upload ────────────────────────────────────────────────────────────────────
 
 class UploadResponse(BaseModel):
     document_id: str
@@ -14,25 +14,25 @@ class UploadResponse(BaseModel):
     message: str
 
 
-# ── Chat ────────────────────────────────────────────────────────────────────
+# ── Chat ──────────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
     document_id: str
     question: str
-    chat_history: list[dict] = []   # [{"role": "user"|"assistant", "content": "..."}]
+    chat_history: list[dict] = []
 
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: list[dict]             # [{page, text_preview}]
+    sources: list[dict]
     document_id: str
 
 
-# ── Summary ─────────────────────────────────────────────────────────────────
+# ── Summary ───────────────────────────────────────────────────────────────────
 
 class SummaryRequest(BaseModel):
     document_id: str
-    summary_type: str = "general"   # general | key_points | invoice | contract
+    summary_type: str = "general"
 
 
 class SummaryResponse(BaseModel):
@@ -42,14 +42,14 @@ class SummaryResponse(BaseModel):
     structured_data: Optional[dict] = None
 
 
-# ── Document management ──────────────────────────────────────────────────────
+# ── Document management ───────────────────────────────────────────────────────
 
 class DocumentInfo(BaseModel):
     document_id: str
     filename: str
     file_type: str
-    page_count: int
     chunk_count: int
+    file_size_bytes: int = 0
     uploaded_at: datetime
 
 

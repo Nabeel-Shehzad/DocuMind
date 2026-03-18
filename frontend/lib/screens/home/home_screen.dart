@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../controllers/auth_controller.dart';
 import '../../controllers/document_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../app/routes.dart';
@@ -28,6 +29,11 @@ class HomeScreen extends StatelessWidget {
             icon: const Icon(Icons.refresh_outlined),
             onPressed: controller.fetchDocuments,
             tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => Get.find<AuthController>().logout(),
+            tooltip: 'Logout',
           ),
         ],
       ),
