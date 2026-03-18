@@ -1,0 +1,38 @@
+# ── Python / Backend ──────────────────────────────────────────────────────────
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+backend/storage/uploads/*
+backend/storage/chroma_db/*
+backend/storage/test_uploads/
+backend/storage/test_chroma/
+!backend/storage/uploads/.gitkeep
+!backend/storage/chroma_db/.gitkeep
+backend/.pytest_cache/
+backend/test-results.xml
+
+# ── Flutter / Frontend ────────────────────────────────────────────────────────
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/.packages
+frontend/pubspec.lock
+frontend/coverage/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key

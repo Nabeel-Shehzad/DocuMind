@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+storage/uploads/*
+storage/chroma_db/*
+!storage/uploads/.gitkeep
+!storage/chroma_db/.gitkeep
+.pytest_cache/
+*.egg-info/
+dist/
+build/

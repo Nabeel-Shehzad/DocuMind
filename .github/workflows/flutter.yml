@@ -1,0 +1,90 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/flutter.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  # ── Job 1: Analyze + Test ──────────────────────────────────────────────────
+  analyze_and_test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Verify formatting
+        working-directory: frontend
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze code (lint)
+        working-directory: frontend
+        run: flutter analyze --fatal-infos
+
+      - name: Run tests
+        working-directory: frontend
+        run: flutter test --coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-coverage
+          path: frontend/coverage/lcov.info
+
+  # ── Job 2: Build APK ──────────────────────────────────────────────────────
+  build_apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    needs: analyze_and_test   # only runs if analyze+test passes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java (required for Android build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build APK (release)
+        working-directory: frontend
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documind-apk
+          path: frontend/build/app/outputs/flutter-apk/*.apk
+          retention-days: 7

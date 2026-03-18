@@ -1,0 +1,36 @@
+from pydantic_settings import BaseSettings
+from pathlib import Path
+
+
+class Settings(BaseSettings):
+    # Anthropic
+    anthropic_api_key: str
+
+    # Supabase
+    supabase_url: str = ""
+    supabase_key: str = ""
+
+    # App
+    app_env: str = "development"
+    upload_dir: str = "storage/uploads"
+    chroma_dir: str = "storage/chroma_db"
+    max_upload_size_mb: int = 20
+
+    # RAG
+    chunk_size: int = 512
+    chunk_overlap: int = 64
+    top_k_results: int = 5
+
+    # Claude
+    claude_model: str = "claude-opus-4-5"
+    max_tokens: int = 2048
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
+
+# Ensure directories exist
+Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+Path(settings.chroma_dir).mkdir(parents=True, exist_ok=True)
