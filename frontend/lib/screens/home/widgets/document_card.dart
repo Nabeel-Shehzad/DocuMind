@@ -57,7 +57,7 @@ class DocumentCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${document.pageCount} pages • '
+                        '${document.fileSizeLabel.isNotEmpty ? '${document.fileSizeLabel} • ' : ''}'
                         '${document.chunkCount} chunks • '
                         '${DateFormat('MMM d, yyyy').format(document.uploadedAt)}',
                         style: const TextStyle(
