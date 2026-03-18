@@ -21,7 +21,8 @@ class ChatScreen extends StatelessWidget {
             Text(doc.shortName,
                 style: const TextStyle(fontSize: 15)),
             Text(
-              '${doc.pageCount} pages • ${doc.chunkCount} chunks',
+              '${doc.fileSizeLabel.isNotEmpty ? '${doc.fileSizeLabel} • ' : ''}'
+              '${doc.chunkCount} chunks',
               style: const TextStyle(
                   color: AppColors.textHint, fontSize: 11),
             ),

@@ -25,7 +25,8 @@ class ChatController extends GetxController {
     messages.add(ChatMessageModel(
       id:        _uuid.v4(),
       role:      MessageRole.assistant,
-      content:   'Hi! I\'ve read **${doc.filename}** (${doc.pageCount} pages, '
+      content:   'Hi! I\'ve read **${doc.filename}** '
+                 '(${doc.fileSizeLabel.isNotEmpty ? '${doc.fileSizeLabel}, ' : ''}'
                  '${doc.chunkCount} chunks indexed). Ask me anything about it!',
       timestamp: DateTime.now(),
     ));
