@@ -1,7 +1,7 @@
 class ApiConfig {
   // Change this to your machine's IP when testing on a physical device
   // Use 10.0.2.2 for Android emulator, localhost for web/desktop
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = 'http://192.168.100.102:8000';
 
   // Document endpoints
   static const String uploadDocument  = '/documents/upload';
@@ -14,6 +14,6 @@ class ApiConfig {
   static const String summary = '/chat/summary';
 
   // Timeouts
-  static const int connectTimeoutMs = 10000;
-  static const int receiveTimeoutMs = 60000;
+  static const int connectTimeoutMs = 30000;  // 30s — model loading on first start
+  static const int receiveTimeoutMs = 120000; // 120s — large docs / streaming
 }

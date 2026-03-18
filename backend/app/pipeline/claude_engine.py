@@ -1,20 +1,22 @@
 """
-Claude Engine
-Handles RAG-based Q&A and document summarization using Anthropic Claude.
+LLM Engine (Gemini)
+Handles RAG-based Q&A and document summarization using Google Gemini.
 Supports streaming responses via Server-Sent Events (SSE).
 """
 
-import anthropic
-from app.core.config  import settings
+import json
+import google.generativeai as genai
+from app.core.config       import settings
 from app.pipeline.embedder import VectorStore
 import logging
 
 logger = logging.getLogger(__name__)
 
-client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+# Configure Gemini once at module load
+genai.configure(api_key=settings.gemini_api_key)
 
 
-# ── System prompts ───────────────────────────────────────────────────────────
+# ── System prompts ────────────────────────────────────────────────────────────
 
 RAG_SYSTEM_PROMPT = """You are DocuMind, an intelligent document assistant.
 You answer questions strictly based on the provided document context.
@@ -51,7 +53,7 @@ Return in a clear structured format.""",
 
 class ClaudeEngine:
     """
-    Handles all LLM interactions:
+    Handles all LLM interactions via Gemini:
       - Streaming RAG Q&A (question + retrieved context → streamed answer)
       - Document summarization (general, key_points, invoice, contract)
     """
@@ -59,53 +61,54 @@ class ClaudeEngine:
     def __init__(self):
         self.vector_store = VectorStore()
 
-    # ── RAG Chat (Streaming) ─────────────────────────────────────────────────
+    # ── RAG Chat (Streaming) ──────────────────────────────────────────────────
 
     def stream_chat(self, document_id: str, question: str, chat_history: list[dict]):
         """
         Generator that yields SSE-formatted text chunks.
         Usage in FastAPI: return StreamingResponse(engine.stream_chat(...))
         """
-        # 1. Retrieve relevant chunks
-        chunks = self.vector_store.search(question, document_id)
-        if not chunks:
-            yield "data: I couldn't find relevant content in the document for your question.\n\n"
-            return
+        try:
+            # 1. Retrieve relevant chunks
+            chunks = self.vector_store.search(question, document_id)
+            if not chunks:
+                yield "data: I couldn't find relevant content in the document for your question.\n\n"
+                yield "event: done\ndata: [DONE]\n\n"
+                return
 
-        # 2. Build context block
-        context_text = "\n\n".join(
-            f"[Page {c['page']}]\n{c['text']}" for c in chunks
-        )
+            # 2. Build context block
+            context_text = "\n\n".join(
+                f"[Page {c['page']}]\n{c['text']}" for c in chunks
+            )
 
-        # 3. Build messages
-        messages = self._build_messages(question, context_text, chat_history)
+            # 3. Stream sources metadata first
+            sources = [{"page": c["page"], "text_preview": c["text"][:120] + "..."} for c in chunks]
+            yield f"event: sources\ndata: {json.dumps(sources)}\n\n"
 
-        # 4. Stream from Claude
-        sources = [{"page": c["page"], "text_preview": c["text"][:120] + "..."} for c in chunks]
+            # 4. Build Gemini contents (history + current question with context)
+            contents = self._build_contents(question, context_text, chat_history)
 
-        # First, stream the source metadata as a special SSE event
-        import json
-        yield f"event: sources\ndata: {json.dumps(sources)}\n\n"
+            # 5. Stream answer tokens from Gemini
+            model = genai.GenerativeModel(
+                model_name=settings.gemini_model,
+                system_instruction=RAG_SYSTEM_PROMPT,
+            )
+            response = model.generate_content(contents, stream=True)
+            for chunk in response:
+                if chunk.text:
+                    escaped = chunk.text.replace("\n", "\\n")
+                    yield f"data: {escaped}\n\n"
 
-        # Then stream the answer tokens
-        with client.messages.stream(
-            model=settings.claude_model,
-            max_tokens=settings.max_tokens,
-            system=RAG_SYSTEM_PROMPT,
-            messages=messages,
-        ) as stream:
-            for text in stream.text_stream:
-                # Escape newlines for SSE format
-                escaped = text.replace("\n", "\\n")
-                yield f"data: {escaped}\n\n"
+        except Exception as e:
+            logger.error(f"stream_chat error: {e}", exc_info=True)
+            yield f"data: Error: {str(e)}\n\n"
 
         yield "event: done\ndata: [DONE]\n\n"
 
-    # ── Summarization (Non-streaming) ────────────────────────────────────────
+    # ── Summarization (Non-streaming) ─────────────────────────────────────────
 
     def summarize(self, document_id: str, summary_type: str = "general") -> dict:
         """Generate a structured summary of a document."""
-        # Retrieve many chunks to cover the full document
         chunks = self.vector_store.search(
             query="document summary overview main content",
             document_id=document_id,
@@ -115,56 +118,38 @@ class ClaudeEngine:
         if not chunks:
             return {"summary": "No content found for this document.", "structured_data": None}
 
-        # Sort by page to maintain reading order
         chunks.sort(key=lambda x: (x["page"], 0))
         full_text = "\n\n".join(f"[Page {c['page']}]\n{c['text']}" for c in chunks)
 
-        prompt = SUMMARY_PROMPTS.get(summary_type, SUMMARY_PROMPTS["general"])
+        prompt   = SUMMARY_PROMPTS.get(summary_type, SUMMARY_PROMPTS["general"])
+        model    = genai.GenerativeModel(model_name=settings.gemini_model)
+        response = model.generate_content(f"{prompt}\n\n--- DOCUMENT CONTENT ---\n{full_text}")
+        summary_text = response.text
 
-        response = client.messages.create(
-            model=settings.claude_model,
-            max_tokens=settings.max_tokens,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"{prompt}\n\n--- DOCUMENT CONTENT ---\n{full_text}",
-                }
-            ],
-        )
-
-        summary_text = response.content[0].text
-
-        # For invoice/contract, try to parse structured JSON
         structured_data = None
         if summary_type in ("invoice", "contract"):
             structured_data = self._try_parse_json(summary_text)
 
-        return {
-            "summary":         summary_text,
-            "structured_data": structured_data,
-        }
+        return {"summary": summary_text, "structured_data": structured_data}
 
-    # ── Helpers ──────────────────────────────────────────────────────────────
+    # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _build_messages(
-        self,
-        question: str,
-        context: str,
-        history: list[dict],
-    ) -> list[dict]:
-        messages = list(history)   # preserve previous turns
-        messages.append({
+    @staticmethod
+    def _build_contents(question: str, context: str, history: list[dict]) -> list[dict]:
+        """Convert chat history + current question into Gemini contents format."""
+        contents = []
+        for msg in history:
+            role = "model" if msg.get("role") == "assistant" else "user"
+            contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
+        contents.append({
             "role": "user",
-            "content": (
-                f"Document context:\n{context}\n\n"
-                f"Question: {question}"
-            ),
+            "parts": [{"text": f"Document context:\n{context}\n\nQuestion: {question}"}],
         })
-        return messages
+        return contents
 
-    def _try_parse_json(self, text: str) -> dict | None:
-        import json, re
-        # Extract JSON block if wrapped in markdown
+    @staticmethod
+    def _try_parse_json(text: str) -> dict | None:
+        import re
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         raw = match.group(1) if match else text
         try:

@@ -21,7 +21,9 @@ class DocumentModel {
     fileType:      json['file_type']        as String,
     chunkCount:    json['chunk_count']      as int,
     fileSizeBytes: (json['file_size_bytes'] as int?) ?? 0,
-    uploadedAt:    DateTime.parse(json['uploaded_at'] as String),
+    uploadedAt:    json['uploaded_at'] != null
+                       ? DateTime.parse(json['uploaded_at'] as String)
+                       : DateTime.now(),
   );
 
   // File type icon helper

@@ -3,8 +3,8 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
-    # Anthropic
-    anthropic_api_key: str
+    # Gemini
+    gemini_api_key: str
 
     # Supabase
     supabase_url: str = ""
@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     chunk_overlap: int = 64
     top_k_results: int = 5
 
-    # Claude
-    claude_model: str = "claude-sonnet-4-5"
+    # Gemini model
+    gemini_model: str = "gemini-3-flash-preview"
     max_tokens: int = 2048
 
     class Config:

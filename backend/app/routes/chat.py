@@ -21,7 +21,7 @@ pipeline = IngestionPipeline()
 
 
 @router.post("/")
-def chat(
+async def chat(
     request: ChatRequest,
     user_id: str = Depends(get_current_user_id),
 ):

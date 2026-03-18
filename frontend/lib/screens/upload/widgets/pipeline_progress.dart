@@ -25,13 +25,15 @@ class PipelineProgress extends StatelessWidget {
   }
 
   _StageStatus _getStatus(UploadStage stage) {
-    final stages = _stages.map((s) => s.stage).toList();
+    if (currentStage == UploadStage.error) return _StageStatus.pending;
+    if (currentStage == UploadStage.done)  return _StageStatus.done;
+
+    final stages     = _stages.map((s) => s.stage).toList();
     final currentIdx = stages.indexOf(currentStage);
     final stageIdx   = stages.indexOf(stage);
 
-    if (currentStage == UploadStage.error) return _StageStatus.pending;
-    if (stageIdx < currentIdx)             return _StageStatus.done;
-    if (stageIdx == currentIdx)            return _StageStatus.active;
+    if (stageIdx < currentIdx)  return _StageStatus.done;
+    if (stageIdx == currentIdx) return _StageStatus.active;
     return _StageStatus.pending;
   }
 }
